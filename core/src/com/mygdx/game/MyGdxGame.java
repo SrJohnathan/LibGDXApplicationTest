@@ -11,6 +11,7 @@ import com.badlogic.gdx.assets.loaders.resolvers.ExternalFileHandleResolver;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes;
@@ -25,11 +26,13 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.viewport.FitViewport;
 
 import java.io.File;
 
 import particles.CameraView;
 import particles.EffekseerManager;
+import particles.OnAnimationComplete;
 import particles.ParticleEffekseer;
 
 
@@ -37,12 +40,16 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
     SpriteBatch batch;
     Texture img;
     private ParticleEffekseer effekseer;
+
     private EffekseerManager manager;
    CameraInputController controller;
     public ModelBatch modelBatch;
     public Model model;
     public ModelInstance instance;
     PerspectiveCamera perspectiveCamera ;
+    OrthographicCamera orthographicCamera;
+    FitViewport viewport;
+
     public Environment environment;
 
 
@@ -54,8 +61,11 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
         batch = new SpriteBatch();
         img = new Texture("badlogic.jpg");
         modelBatch = new ModelBatch();
+
+         orthographicCamera = new OrthographicCamera(1280f,720f);
         perspectiveCamera = new PerspectiveCamera(67, 1280f, 720);
 
+        viewport= new FitViewport(1280,720,orthographicCamera);
 
         assetManager.load("data/obj/duelo.g3dj",Model.class);
 
@@ -77,17 +87,25 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
         perspectiveCamera.up.set(0f,1f,0f);
         perspectiveCamera.update();
 
-        controller = new CameraInputController(perspectiveCamera);
+        controller = new CameraInputController(orthographicCamera);
 
-        manager = new EffekseerManager(perspectiveCamera, CameraView.CAMERA_3VIEW);
+        manager = new EffekseerManager(orthographicCamera);
+        manager.setViewport(viewport);
+
+
+
+
 
         effekseer = new ParticleEffekseer(manager);
-        effekseer.setMagnification(0.2f);
+        effekseer.setMagnification(20f);
         try {
-            effekseer.load("data/ring.efk");
+            effekseer.load("data/tu.efk",false);
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+
+
 
 
      //  effekseer.setLacation(0, 2f, 0f);
@@ -117,6 +135,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 
 
 
+
         modelBatch.begin(perspectiveCamera);
         if(instance  != null){
             modelBatch.render(instance,environment);
@@ -124,8 +143,14 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
         modelBatch.end();
 
 
+        batch.begin();
+        batch.draw(img,0,0);
+        batch.end();
+
 
         manager.draw(Gdx.graphics.getDeltaTime());
+
+
 
 
         if(!loadObjs) {
@@ -139,7 +164,6 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
             }
         }
 
-         System.out.println( perspectiveCamera.projection.getValues().length);
     }
 
     @Override
@@ -152,7 +176,12 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 
     }
 
-
+    @Override
+    public void resize(int width, int height) {
+        orthographicCamera.update();
+        perspectiveCamera.update();
+        viewport.update(width, height);
+    }
 
     public void loadObjs(){
 
@@ -165,9 +194,19 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
         Vector3 vector3 = new Vector3();
         vector3 =  instance.transform.getTranslation(vector3);
         instance.transform.translate(vector3.x,vector3.y -2,0f);
-        effekseer.setLacation(0f,  -0f,2.7f);
+        effekseer.setLacation( 50,  0,2.7f);
+
         perspectiveCamera.position.set(-0.05873839f, 1.5226717f, 8.1832256f);
-        effekseer.play();
+
+
+
+        effekseer.setOnAnimationComplete(new OnAnimationComplete() {
+            @Override
+            public void finish() {
+                System.out.println("oiiiii");
+            }
+        });
+
     }
 
 
@@ -196,7 +235,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
         if(keycode == Input.Keys.S){
 
 
-            effekseer.setLacation(effekseer.X ,(effekseer.Y -= (2* Gdx.graphics.getDeltaTime())),effekseer.Z );
+            effekseer.setLacation(effekseer.getX() ,effekseer.getY()  - (2* Gdx.graphics.getDeltaTime()),effekseer.getZ() );
 
         }
 
@@ -204,24 +243,30 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 
 
             effekseer.play();
-            effekseer.setLacation(effekseer.X ,effekseer.Y,effekseer.Z );
+
 
         }
 
 
         if(keycode == Input.Keys.A){
 
+            effekseer.resume();
 
-            effekseer.setLacation((effekseer.X ) ,(effekseer.Y ),(effekseer.Z  -= ( 2 * Gdx.graphics.getDeltaTime()) ) );
+        }
+
+        if(keycode == Input.Keys.P){
+
+            effekseer.pause();
 
         }
 
         if(keycode == Input.Keys.Z){
 
 
-         System.out.println( "X " +    perspectiveCamera.position.x
-               +  "Y " +    perspectiveCamera.position.y
-               +  "Z " +     perspectiveCamera.position.z);
+            orthographicCamera.position.set(
+                    orthographicCamera.position.x,
+                    (orthographicCamera.position.y += (50 * Gdx.graphics.getDeltaTime())),
+                    0);
 
 
         }
